@@ -80,7 +80,7 @@ def on_message(client, userdata, message):
     try:
         last_message_time = time.time()
         logging.info(f"message: {message.topic}")
-        if last_message_time > time.time() - 20:
+        if last_message_time > time.time() + 20:
             for chat in chat_list:
                 bot = Bot(token=bot_token)
                 asyncio.run(bot.send_message(chat_id=chat, text="/open\n/drop"))
