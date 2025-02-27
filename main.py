@@ -9,7 +9,6 @@ import paho.mqtt.client as mqtt
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
-
 mqttc = None
 mqtt_url = os.environ['MQTT_URL']
 mqtt_port = int(os.environ['MQTT_PORT'])
@@ -24,8 +23,6 @@ state_topic = "door/state"
 
 # Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-monitor_thread = None
 
 
 async def restrict(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -45,13 +42,22 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     await context.bot.send_message(chat_id=chat_id, text="Bye.")
 
+
 async def open_door(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Received /open_door command.")
     send_mqtt_message("1")
 
+
 async def drop_call(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Received /drop_call command.")
     send_mqtt_message("2")
+
+
+async def open_on_next_call_func(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info("Received /open_on_next_call command.")
+    await context.bot.send_message(chat_id=update.effective_chat.id,
+                                   text=f"Will open on next call automatically.")
+
 
 def on_subscribe(client, userdata, mid, reason_code_list, properties):
     if reason_code_list[0].is_failure:
@@ -106,6 +112,7 @@ def send_mqtt_message(input):
     mqttc.disconnect()
     mqttc.loop_stop()
 
+
 def start_mqtt():
     mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="door-call-bot", protocol=mqtt.MQTTv5)
     mqttc.on_connect = on_connect
@@ -128,6 +135,8 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(bot_token).build()
     application.add_handler(CommandHandler('start', start, filters=filters.Chat(chat_list)))
     application.add_handler(CommandHandler('open', open_door, filters=filters.Chat(chat_list)))
+    application.add_handler(
+        CommandHandler('open_on_next_call', open_on_next_call_func, filters=filters.Chat(chat_list)))
     application.add_handler(CommandHandler('drop', drop_call, filters=filters.Chat(chat_list)))
     application.add_handler(MessageHandler(None, callback=restrict))
 
