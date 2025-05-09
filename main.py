@@ -20,6 +20,9 @@ last_message_time = time.time()
 
 call_topic = "door/call"
 state_topic = "door/state"
+lock_topic = "lock"
+
+lock_state = "0"
 
 # Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -77,17 +80,30 @@ def on_unsubscribe(client, userdata, mid, reason_code_list, properties):
 def on_message(client, userdata, message):
     logging.info(f"Inconming value {message.payload.decode()} for  {message.topic}")
     global last_message_time
+    global lock_state
+
     try:
         logging.info(f"message: {message.topic}")
         logging.info(f"Last message time: {last_message_time}, current time: {time.time()}")
-        if last_message_time + 20 < time.time():
-            last_message_time = time.time()
-            logging.info(f"Sending message")
-            for chat in chat_list:
-                bot = Bot(token=bot_token)
-                asyncio.run(bot.send_message(chat_id=chat, text="/open\n/drop"))
-        else:
-            logging.info(f"Ignoring calls in 20 sec starting from: {last_message_time}")
+        if message.topic == call_topic:
+            if last_message_time + 20 < time.time():
+                last_message_time = time.time()
+                logging.info(f"Sending message")
+                for chat in chat_list:
+                    bot = Bot(token=bot_token)
+                    asyncio.run(bot.send_message(chat_id=chat, text="/open\n/drop"))
+            else:
+                logging.info(f"Ignoring calls in 20 sec starting from: {last_message_time}")
+        if message.topic == lock_topic:
+            if lock_state != message.payload.decode():
+                lock_state = message.payload.decode()
+                for chat in chat_list:
+                    bot = Bot(token=bot_token)
+                    if "1" == lock_state:
+                        asyncio.run(bot.send_message(chat_id=chat, text="Lock opened"))
+                    else:
+                        asyncio.run(bot.send_message(chat_id=chat, text="Lock closed"))
+
     except IOError:
         mqttc.publish("/error", payload="Request failed")
         logging.exception(f"Request failed")
