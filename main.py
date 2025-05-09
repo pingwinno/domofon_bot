@@ -95,6 +95,7 @@ def on_message(client, userdata, message):
             else:
                 logging.info(f"Ignoring calls in 20 sec starting from: {last_message_time}")
         if message.topic == lock_topic:
+            logging.info(f"Door state changed {lock_state}")
             if lock_state != message.payload.decode():
                 lock_state = message.payload.decode()
                 for chat in chat_list:
