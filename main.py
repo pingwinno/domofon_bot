@@ -83,7 +83,7 @@ def on_message(client, userdata, message):
     global lock_state
 
     try:
-        if message.topic is call_topic:
+        if message.topic == call_topic:
             logging.info(f"message: {message.topic}")
             logging.info(f"Last message time: {last_message_time}, current time: {time.time()}")
             if last_message_time + 20 < time.time():
@@ -94,14 +94,14 @@ def on_message(client, userdata, message):
                     asyncio.run(bot.send_message(chat_id=chat, text="/open\n/drop"))
             else:
                 logging.info(f"Ignoring calls in 20 sec starting from: {last_message_time}")
-        if message.topic is lock_topic:
-            if lock_state != message.payload.decode():
+        if message.topic == lock_topic:
+            if lock_state != message.payload.decode().strip():
                 logging.info(f"Door state changed {lock_state}")
                 logging.info(f"Message type {type(message.payload.decode())}")
-                lock_state = message.payload.decode()
+                lock_state = message.payload.decode().strip()
                 for chat in chat_list:
                     bot = Bot(token=bot_token)
-                    if 1 == lock_state:
+                    if "1" == lock_state:
                         asyncio.run(bot.send_message(chat_id=chat, text="Lock opened"))
                     else:
                         asyncio.run(bot.send_message(chat_id=chat, text="Lock closed"))
