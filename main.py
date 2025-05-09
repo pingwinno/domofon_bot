@@ -48,13 +48,16 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def open_door(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Received /open_door command.")
-    send_mqtt_message("1")
+    send_mqtt_message(state_topic, "1")
 
 
 async def drop_call(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Received /drop_call command.")
-    send_mqtt_message("2")
+    send_mqtt_message(state_topic, "2")
 
+async def check_lock_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info("Received /check_lock_state.")
+    send_mqtt_message(lock_topic, "2")
 
 async def open_on_next_call_func(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Received /open_on_next_call command.")
@@ -103,8 +106,11 @@ def on_message(client, userdata, message):
                     bot = Bot(token=bot_token)
                     if "1" == lock_state:
                         asyncio.run(bot.send_message(chat_id=chat, text="Lock opened"))
-                    else:
+                    elif "0" == lock_state:
                         asyncio.run(bot.send_message(chat_id=chat, text="Lock closed"))
+                    else:
+                         asyncio.run(bot.send_message(chat_id=chat, text="Checking lock state"))
+
 
     except IOError:
         mqttc.publish("/error", payload="Request failed")
@@ -124,11 +130,11 @@ def on_publish(client, userdata, mid, reason_code, properties):
     logging.info(f"message published {mid}")
 
 
-def send_mqtt_message(input):
+def send_mqtt_message(topic, input):
     mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="door-bot", protocol=mqtt.MQTTv5)
     mqttc.connect(mqtt_url, mqtt_port)
     mqttc.loop_start()
-    msg_info = mqttc.publish(state_topic, input, qos=0)
+    msg_info = mqttc.publish(topic, input, qos=0)
     logging.info(f"Message is sent: {msg_info}")
     mqttc.disconnect()
     mqttc.loop_stop()
@@ -156,6 +162,7 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(bot_token).build()
     application.add_handler(CommandHandler('start', start, filters=filters.Chat(chat_list)))
     application.add_handler(CommandHandler('open', open_door, filters=filters.Chat(chat_list)))
+    application.add_handler(CommandHandler('check_lock', check_lock_state, filters=filters.Chat(chat_list)))
     application.add_handler(
         CommandHandler('open_on_next_call', open_on_next_call_func, filters=filters.Chat(chat_list)))
     application.add_handler(CommandHandler('drop', drop_call, filters=filters.Chat(chat_list)))
