@@ -115,6 +115,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         logging.error(f"Failed to connect: {reason_code}. loop_forever() will retry connection")
     else:
         client.subscribe(call_topic)
+        client.subscribe(lock_topic)
         logging.info(f"Subscribed to topic: {call_topic}")
 
 
